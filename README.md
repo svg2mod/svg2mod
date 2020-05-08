@@ -87,3 +87,16 @@ Layers must be named (case-insensitive) according to the following rules:
 | B.CrtYd             | B.CrtYd          | --           | Yes          |
 
 Note: If you have a layer "F.Cu", all of its sub-layers will be treated as "F.Cu" regardless of their names.
+
+### Holes
+
+Holes won't always work. One trick that might work (depending on the complexity of your artwork) is to not use any holes at all but open them up by adding a thin path to the outside of your drawing before using the boolean function to remove them from your main shape.
+After converting your svg file using svg2mod you can use the polygon tool in the Kicad footprint editor to close these holes. See the image below:
+1. artwork with holes
+2. paths added so the artwork does not have any real holes
+3. the file imported in Kicad
+4. polygon shape on top of the openings
+5. final result
+
+![alt text](https://github.com/javl/svg2mod/blob/master/example/hole-fix.png?raw=true)
+
