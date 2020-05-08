@@ -98,5 +98,5 @@ After converting your svg file using svg2mod you can use the polygon tool in the
 4. polygon shape on top of the openings
 5. final result
 
-![alt text](https://github.com/javl/svg2mod/blob/master/example/hole-fix.png?raw=true)
+![hole workaround](https://raw.githubusercontent.com/javl/svg2mod/master/examples/hole-fix.png)
 
