@@ -55,7 +55,7 @@ svg2mod expects images saved in the uncompressed Inkscape SVG (i.e., not "plain 
  * Paths are supported.
    * A path may have an outline and a fill.  (Colors will be ignored.)
    * A path may have holes, defined by interior segments within the path (see included examples).  Sometimes this will render propery in KiCad, but sometimes not.
-   * Paths with filled areas within holes may not work at all.
+   * Paths with filled areas within holes may not work at all. See below for a possible workaround.
  * Groups may be used.  However, styles applied to groups (e.g., stroke-width) are not applied to contained drawing elements.  In these cases, it may be necessary to ungroup (and perhaps regroup) the elements.
  * Layers must be named according to the rules below.
  * Other types of elements such as rect, arc, and circle are not supported.
