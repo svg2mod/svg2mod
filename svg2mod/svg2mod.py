@@ -62,6 +62,7 @@ def main():
             args.scale_factor,
             args.precision,
             args.dpi,
+            ignore_hidden_layers = args.ignore_hidden_layers,
         )
 
     else:
@@ -78,6 +79,7 @@ def main():
                     args.scale_factor,
                     args.precision,
                     args.dpi,
+                    ignore_hidden_layers = args.ignore_hidden_layers,
                 )
 
             except Exception as e:
@@ -95,6 +97,7 @@ def main():
                 args.precision,
                 use_mm = use_mm,
                 dpi = args.dpi,
+                ignore_hidden_layers = args.ignore_hidden_layers,
             )
 
     # Export the footprint:
@@ -517,6 +520,7 @@ class Svg2ModExport( object ):
         precision = 20.0,
         use_mm = True,
         dpi = DEFAULT_DPI,
+        ignore_hidden_layers = False,
     ):
         if use_mm:
             # 25.4 mm/in;
@@ -533,6 +537,7 @@ class Svg2ModExport( object ):
         self.precision = precision
         self.use_mm = use_mm
         self.dpi = dpi
+        self.ignore_hidden_layers = ignore_hidden_layers
 
     #------------------------------------------------------------------------
 
@@ -578,9 +583,16 @@ class Svg2ModExport( object ):
             for name in self.layers.keys():
                 #if re.search( name, item.name, re.I ):
                 if name == item.name:
-                    print( "Found SVG layer: {}".format( item.name ) )
-                    self.imported.svg.items.append( item )
-                    self.layers[ name ] = item
+                    hidden_string = ""
+                    keep = True
+                    if(item.hidden and self.ignore_hidden_layers):
+                        keep = False
+                        hidden_string = "[hidden and ignored]"
+                    print( "Found SVG layer: {} {}".format( item.name, hidden_string ) )
+
+                    if( keep ):
+                        self.imported.svg.items.append( item )
+                        self.layers[ name ] = item
                     break
             else:
                 self._prune( item.items )
@@ -975,6 +987,7 @@ class Svg2ModExportLegacyUpdater( Svg2ModExportLegacy ):
         precision = 20.0,
         dpi = DEFAULT_DPI,
         include_reverse = True,
+        ignore_hidden_layers = False,
     ):
         self.file_name = file_name
         use_mm = self._parse_output_file()
@@ -987,6 +1000,7 @@ class Svg2ModExportLegacyUpdater( Svg2ModExportLegacy ):
             precision,
             use_mm,
             dpi,
+            ignore_hidden_layers,
         )
 
 
@@ -1463,6 +1477,15 @@ def get_arguments():
         action = 'store_const',
         const = True,
         help = "Center the module to the center of the bounding box",
+        default = False,
+    )
+
+    parser.add_argument(
+        '-x',
+        dest = 'ignore_hidden_layers',
+        action = 'store_const',
+        const = True,
+        help = "Do not export hidden layers",
         default = False,
     )
 
