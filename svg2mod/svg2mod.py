@@ -287,10 +287,8 @@ class PolygonSegment( object ):
                     # is acceptable:
                     return ( cp, hole.points_starting_on_index( hp ) )
 
-        print(
-            "\033[91mCould not insert segment without overlapping other segments\033[0m",
-            file=sys.stderr
-        )
+        if self.verbose:
+            print("      Could not insert segment without overlapping other segments")
 
 
     #------------------------------------------------------------------------
@@ -674,6 +672,12 @@ class Svg2ModExport( object ):
                         points, holes = segments[ 0 ].inline( holes )
                         segments[ 0 ].points = points
                         giveup += 1
+
+                    if len(holes):
+                        print(
+                            "\033[91mCould not insert segment without overlapping other segments, after {} attempts\033[0m".format(giveup),
+                            file=sys.stderr
+                        )
 
                 elif len( segments ) > 0:
                     points = segments[ 0 ].points
