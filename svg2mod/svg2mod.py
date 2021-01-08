@@ -321,7 +321,7 @@ class PolygonSegment( object ):
     def inline( self, segments ):
 
         if len( segments ) < 1:
-            return self.points
+            return self.points, []
 
         if self.verbose:
             print( "    Inlining {} segments...".format( len( segments ) ) )
@@ -337,6 +337,7 @@ class PolygonSegment( object ):
             )
             if insertion is not None:
                 insertions.append( insertion )
+                segments.remove( hole )
 
         insertions.sort( key = lambda i: i[ 0 ] )
 
@@ -367,7 +368,7 @@ class PolygonSegment( object ):
             inlined.append( points[ ip ] )
             ip += 1
 
-        return inlined
+        return inlined, segments
 
 
     #------------------------------------------------------------------------
@@ -667,7 +668,12 @@ class Svg2ModExport( object ):
                     segment.process( self, flip, fill )
 
                 if len( segments ) > 1:
-                    points = segments[ 0 ].inline( segments[ 1 : ] )
+                    holes = segments[ 1 : ]
+                    giveup = 0
+                    while ( len( holes ) and giveup < 5 ):
+                        points, holes = segments[ 0 ].inline( holes )
+                        segments[ 0 ].points = points
+                        giveup += 1
 
                 elif len( segments ) > 0:
                     points = segments[ 0 ].points
