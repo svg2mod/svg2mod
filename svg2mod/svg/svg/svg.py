@@ -26,7 +26,10 @@ import xml.etree.ElementTree as etree
 import itertools
 import operator
 import json
-from .geometry import *
+#from .geometry import *
+from .geometry import Point, Segment, simplify_segment
+import svgpathtools
+import numpy as np
 
 
 svg_ns = '{http://www.w3.org/2000/svg}'
@@ -79,6 +82,7 @@ class Transformable:
 
     # Parse transform field
     def getTransformations(self, elt):
+        # TODO: Replace this with svgpathtools.parser.parse_transform?
         t = elt.get('transform')
         if t is None: return
 
@@ -326,6 +330,7 @@ class Group(Transformable):
         return {'Group ' + self.id + " ({})".format( self.name ) : self.items}
 
 class Matrix:
+    # TODO: Replace by numpy matrix as used by svgpathtools?
     ''' SVG transformation matrix and its operations
     a SVG matrix is represented as a list of 6 values [a, b, c, d, e, f]
     (named vect hereafter) which represent the 3x3 matrix
@@ -385,147 +390,10 @@ class Path(Transformable):
 
     def parse(self, pathstr):
         """Parse path string and build elements list"""
-
-        pathlst = re.findall(number_re + r"|\ *[%s]\ *" % COMMANDS, pathstr)
-
-        pathlst.reverse()
-
-        command = None
-        current_pt = Point(0,0)
-        start_pt = None
-
-        while pathlst:
-            if pathlst[-1].strip() in COMMANDS:
-                last_command = command
-                command = pathlst.pop().strip()
-                absolute = (command == command.upper())
-                command = command.upper()
-            else:
-                if command is None:
-                    raise ValueError("No command found at %d" % len(pathlst))
-
-            if command == 'M':
-            # MoveTo
-                x = pathlst.pop()
-                y = pathlst.pop()
-                pt = Point(x, y)
-                if absolute:
-                    current_pt = pt
-                else:
-                    current_pt += pt
-                start_pt = current_pt
-
-                self.items.append(MoveTo(current_pt))
-
-                # MoveTo with multiple coordinates means LineTo
-                command = 'L'
-
-            elif command == 'Z':
-            # Close Path
-                l = Segment(current_pt, start_pt)
-                self.items.append(l)
-                current_pt = start_pt
-
-            elif command in 'LHV':
-            # LineTo, Horizontal & Vertical line
-                # extra coord for H,V
-                if absolute:
-                    x,y = current_pt.coord()
-                else:
-                    x,y = (0,0)
-
-                if command in 'LH':
-                    x = pathlst.pop()
-                if command in 'LV':
-                    y = pathlst.pop()
-
-                pt = Point(x, y)
-                if not absolute:
-                    pt += current_pt
-
-                self.items.append(Segment(current_pt, pt))
-                current_pt = pt
-
-            elif command in 'CQ':
-                dimension = {'Q':3, 'C':4}
-                bezier_pts = []
-                bezier_pts.append(current_pt)
-                for i in range(1,dimension[command]):
-                    x = pathlst.pop()
-                    y = pathlst.pop()
-                    pt = Point(x, y)
-                    if not absolute:
-                        pt += current_pt
-                    bezier_pts.append(pt)
-
-                self.items.append(Bezier(bezier_pts))
-                current_pt = pt
-
-            elif command in 'TS':
-                # number of points to read
-                nbpts = {'T':1, 'S':2}
-                # the control point, from previous Bezier to mirror
-                ctrlpt = {'T':1, 'S':2}
-                # last command control
-                last = {'T': 'QT', 'S':'CS'}
-
-                bezier_pts = []
-                bezier_pts.append(current_pt)
-
-                if last_command in last[command]:
-                    pt0 = self.items[-1].control_point(ctrlpt[command])
-                else:
-                    pt0 = current_pt
-                pt1 = current_pt
-                # Symetrical of pt1 against pt0
-                bezier_pts.append(pt1 + pt1 - pt0)
-
-                for i in range(0,nbpts[command]):
-                    x = pathlst.pop()
-                    y = pathlst.pop()
-                    pt = Point(x, y)
-                    if not absolute:
-                        pt += current_pt
-                    bezier_pts.append(pt)
-
-                self.items.append(Bezier(bezier_pts))
-                current_pt = pt
-
-            elif command == 'A':
-                rx = pathlst.pop()
-                ry = pathlst.pop()
-                xrot = pathlst.pop()
-                # Arc flags are not necesarily sepatated numbers
-                flags = pathlst.pop().strip()
-                large_arc_flag = flags[0]
-                if large_arc_flag not in '01':
-                    print('\033[91mArc parsing failure\033[0m', file=sys.error)
-                    break
-
-                if len(flags) > 1:  flags = flags[1:].strip()
-                else:               flags = pathlst.pop().strip()
-                sweep_flag = flags[0]
-                if sweep_flag not in '01':
-                    print('\033[91mArc parsing failure\033[0m', file=sys.error)
-                    break
-
-                if len(flags) > 1:  x = flags[1:]
-                else:               x = pathlst.pop()
-                y = pathlst.pop()
-                # TODO
-                if self.verbose:
-                    print('\033[91mUnsupported ARC: ' +
-                        ', '.join([rx, ry, xrot, large_arc_flag, sweep_flag, x, y]) + "\033[0m",
-                        file=sys.stderr
-                    )
-#                self.items.append(
-#                    Arc(rx, ry, xrot, large_arc_flag, sweep_flag, Point(x, y)))
-
-            else:
-                pathlst.pop()
+        self.path = svgpathtools.parse_path(pathstr)
 
     def __str__(self):
-        return '\n'.join(str(x) for x in self.items)
+        return str(self.path)
 
     def __repr__(self):
         return '<Path ' + self.id + '>'
@@ -534,17 +402,43 @@ class Path(Transformable):
         '''Return a list of segments, each segment is ended by a MoveTo.
            A segment is a list of Points'''
         ret = []
+
+        def to_point(c):
+            return Point(c.real, c.imag)
+
         # group items separated by MoveTo
-        for moveTo, group in itertools.groupby(self.items,
-                lambda x: isinstance(x, MoveTo)):
-            # Use only non MoveTo item
-            if not moveTo:
-                # Generate segments for each relevant item
-                seg = [x.segments(precision) for x in group]
-                # Merge all segments into one
-                ret.append(list(itertools.chain.from_iterable(seg)))
+        for subpath in self.path.continuous_subpaths():
+            seg = []
+            for cmd in subpath:
+                if isinstance(cmd, svgpathtools.Line):
+                    # For lines, just add the start point (the end point
+                    # will be added by the next segment)
+                    seg.append(to_point(cmd.point(0)))
+                else:
+                    if precision != 0:
+                        n = int(cmd.length() / precision) + 1
+                    else:
+                        n = 1000
+                    #if n < 10: n = 10
+                    if n > 1000 : n = 1000
+
+                    for i in range(0, n):
+                        seg.append(to_point(cmd.point(i/n)))
+            seg.append(to_point(cmd.point(1)))
+            ret.append(seg)
 
         return ret
+
+    def transform(self, matrix):
+        ''' this overrides Transformable.transform() '''
+        if matrix is None:
+            matrix = self.matrix
+        else:
+            matrix *= self.matrix
+
+        transform = np.identity(3)
+        transform[0:2, 0:3] = np.array([matrix.vect[0:6:2], matrix.vect[1:6:2]])
+        self.path = svgpathtools.path.transform(self.path, transform)
 
     def simplify(self, precision):
         '''Simplify segment with precision:
