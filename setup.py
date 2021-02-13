@@ -22,6 +22,7 @@ except:
     tag = "develpment"
 
 requirements = [
+    'svgpathtools',
 ]
 
 test_requirements = [
