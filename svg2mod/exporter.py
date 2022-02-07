@@ -26,13 +26,14 @@ import io
 import json
 import os
 import re
+import sys
 import time
-from abc import ABC, abstractmethod
+#from abc import ABC, abstractmethod
 
-from svg2mod import svg
-from svg2mod.coloredlogger import logger, unfiltered_logger
-from svg2mod.importer import Svg2ModImport
-from svg2mod.svg2mod import PolygonSegment
+from . import svg
+from .coloredlogger import logger, unfiltered_logger
+from .importer import Svg2ModImport
+from .svg2mod import PolygonSegment
 
 #----------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ MINIMUM_SIZE = 1e-5 # Minimum size kicad will render
 
 #----------------------------------------------------------------------------
 
-class Svg2ModExport(ABC):
+class Svg2ModExport(object):
     ''' An abstract class to provide functionality
     to write to kicad module file.
     The abstract methods are the file type specific
@@ -51,42 +52,42 @@ class Svg2ModExport(ABC):
     #------------------------------------------------------------------------
 
     @property
-    @abstractmethod
+    #@abstractmethod
     def layer_map(self ):
         ''' This should be overwritten by a dictionary object of layer maps '''
         pass
 
-    @abstractmethod
+    #@abstractmethod
     def _get_layer_name( self, item_name, name, front ):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_library_intro( self, cmdline ): pass
 
-    @abstractmethod
+    #@abstractmethod
     def _get_module_name( self, front = None ): pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_module_header( self, label_size, label_pen, reference_y, value_y, front,): pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_modules( self ): pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_module_footer( self, front ):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_polygon_header( self, points, layer ):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_polygon_footer( self, layer, stroke_width, fill=True):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_polygon_point( self, point ):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_polygon_segment( self, p, q, layer, stroke_width ):pass
 
-    @abstractmethod
+    #@abstractmethod
     def _write_thru_hole( self, circle, layer ):pass
 
     #------------------------------------------------------------------------
@@ -168,7 +169,7 @@ class Svg2ModExport(ABC):
 
     #------------------------------------------------------------------------
 
-    def add_svg_element(self, elem : svg.Transformable, layer="F.SilkS"):
+    def add_svg_element(self, elem, layer="F.SilkS"):
         ''' This can be used to add a svg element
         to a specific layer.
         If the importer doesn't have a svg element
@@ -495,7 +496,10 @@ class Svg2ModExport(ABC):
             unfiltered_logger.info( "Writing module file: {}".format( self.file_name ) )
             self.output_file = open( self.file_name, 'w' )
         else:
-            self.output_file = io.StringIO()
+            if sys.version_info.major == 2:
+                self.output_file = io.BytesIO()
+            else:
+                self.output_file = io.StringIO()
 
         self._write_library_intro(cmdline)
 

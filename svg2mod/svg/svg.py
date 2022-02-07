@@ -31,7 +31,7 @@ import platform
 import re
 import sys
 import xml.etree.ElementTree as etree
-from typing import List, Tuple
+#from typing import List, Tuple
 
 from fontTools.misc import loggingTools
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -79,7 +79,7 @@ class Transformable:
         self.matrix = Matrix()
         self.scalex = 1
         self.scaley = 1
-        self.style = {} if not parent_styles and not isinstance(parent_styles, dict) else parent_styles.copy()
+        self.style = {"fill":"#000000"} if not parent_styles and not isinstance(parent_styles, dict) else parent_styles.copy()
         self.rotation = 0
         self.viewport = Point(800, 600) # default viewport is 800x600
         if elt is not None:
@@ -260,7 +260,7 @@ class Svg(Transformable):
         if filename:
             self.parse(filename)
 
-    def parse(self, filename:str):
+    def parse(self, filename):
         '''Read provided svg xml file and
         append all svg element to items list
         '''
@@ -455,7 +455,7 @@ class Path(Transformable):
         if elt is not None:
             self.parse(elt.get('d'))
 
-    def parse(self, pathstr:str):
+    def parse(self, pathstr):
         """Parse svg path string and build elements list"""
 
         pathlst = re.findall(number_re + r"|\ *[%s]\ *" % Path.COMMANDS, pathstr)
@@ -599,7 +599,7 @@ class Path(Transformable):
     def __repr__(self):
         return '<Path ' + self.id + '>'
 
-    def segments(self, precision=0) -> List[Segment]:
+    def segments(self, precision=0):
         '''Return a list of segments, each segment is ended by a MoveTo.
            A segment is a list of Points'''
         ret = []
@@ -615,7 +615,7 @@ class Path(Transformable):
 
         return ret
 
-    def simplify(self, precision:float) -> List[Segment]:
+    def simplify(self, precision):
         '''Simplify segment with precision:
            Remove any point which are ~aligned'''
         ret = []
@@ -658,7 +658,7 @@ class Ellipse(Transformable):
     def __repr__(self):
         return '<Ellipse ' + self.id + '>'
 
-    def bbox(self) -> Tuple[Point, Point]:
+    def bbox(self):
         '''Bounding box'''
         #TODO change bounding box dependent on rotation
         pmin = self.center - Point(self.rx, self.ry)
@@ -683,7 +683,7 @@ class Ellipse(Transformable):
         self.rotation += math.degrees(matrix.rot().angle)
         self.matrix= matrix
 
-    def P(self, t) -> Point:
+    def P(self, t):
         '''Return a Point on the Ellipse for t in [0..1] or % from angle 0 to the full circle.
         Rotation is not handled in this function.
         '''
@@ -691,7 +691,7 @@ class Ellipse(Transformable):
         y = self.center.y + self.ry * math.sin(2 * math.pi * t)
         return Point(x,y)
 
-    def segments(self, precision=0) -> List[Segment]:
+    def segments(self, precision=0):
         '''Flatten all curves to segments with target length of precision'''
         if self.arc:
             segs = self.path.segments(precision)
@@ -872,11 +872,11 @@ class Arc(Ellipse):
             self.angles[1] += 2*math.pi
 
     def transform(self, matrix=None):
-        super().transform(matrix)
+        Ellipse.transform(self, matrix)
         self.end_pts[0] = self.matrix * self.end_pts[0]
         self.end_pts[1] = self.matrix * self.end_pts[1]
 
-    def segments(self, precision=0) -> List[Segment]:
+    def segments(self, precision=0):
         '''This returns segments as expected by the
         Path object. (A list of points. Not a list of lists of points)
         '''
@@ -884,7 +884,7 @@ class Arc(Ellipse):
             return self.end_pts
         return Ellipse.segments(self, precision)[0]
 
-    def P(self, t) -> Point:
+    def P(self, t):
         '''Return a Point on the Arc for t in [0..1] where t is the % from
         the start angle to the end angle.
 
@@ -940,12 +940,23 @@ class Rect(Path):
             if rx > width/2: rx = width/2
             if ry > height/2: ry = width/2
             if rx or ry:
-                cmd = f'''M{p.x+rx} {p.y} a{rx} {ry} 0 0 0 {-rx} {ry} v{height-(ry*2)}
-                a{rx} {ry} 0 0 0 {rx} {ry}   h{width-(rx*2)}
-                a{rx} {ry} 0 0 0 {rx} {-ry}  v{-(height-(ry*2))}
-                a{rx} {ry} 0 0 0 {-rx} {-ry} h{-(width-(rx*2))} z'''
+                cmd = '''M{0} {1} a{2} {3} 0 0 0 {4} {3} v{6}
+                a{2} {3} 0 0 0 {2} {3}   h{7}
+                a{2} {3} 0 0 0 {2} {5}  v{8}
+                a{2} {3} 0 0 0 {4} {5} h{9} z'''.format(
+                    p.x+rx, p.y, #0,#1
+                    rx, ry, -rx, -ry, #2,#3,#4,#5
+                    height-(ry*2), #6
+                    width-(rx*2), #7
+                    -(height-(ry*2)), #8
+                    -(width-(rx*2)) #9
+                )
             else:
-                cmd = f'M{p.x},{p.y}v{height}h{width}v{-height}h{-width}'
+                cmd = 'M{0},{1}v{2}h{3}v{4}h{5}'.format(
+                    p.y, p.y, #0,#1
+                    height, width, #2,#3
+                    -height, -width, #4,#5
+                )
 
             self.p = p
             self.width = width
@@ -978,7 +989,7 @@ class Line(Transformable):
     def __repr__(self):
         return '<Line ' + self.id + '>'
 
-    def bbox(self) -> Tuple[Point, Point]:
+    def bbox(self):
         '''Bounding box'''
         xmin = min([p.x for p in (self.P1, self.P2)])
         xmax = max([p.x for p in (self.P1, self.P2)])
@@ -1002,7 +1013,7 @@ class Line(Transformable):
         self.P2 = matrix * self.P2
         self.segment = Segment(self.P1, self.P2)
 
-    def segments(self, __=0) -> List[Segment]:
+    def segments(self, __=0):
         '''Return the segment of the line'''
         return [self.segment.segments()]
 
@@ -1192,7 +1203,7 @@ class Text(Transformable):
             # We are unable to find a font and since there is no default font stop building font data
             logger.error("Unable to find font(s) \"{}\"{}".format(
                 self.font_family,
-                " and no default font specified" if Text.default_font is None else f" or default font \"{Text.default_font}\""
+                " and no default font specified" if Text.default_font is None else ' or default font "{}"'.format(Text.default_font)
             ))
             self.paths = []
             return
@@ -1210,7 +1221,7 @@ class Text(Transformable):
         elif italic and not bold:
             search = ita
         elif italic and bold:
-            search = [f"{b} {i}" if n == 0 else f"{i} {b}" for b in bol for i in ita for n in range(2)]
+            search = ["{} {}".format(b,i) if n == 0 else "{i} {b}".format(i,b) for b in bol for i in ita for n in range(2)]
         tar_font = list(filter(None, [font_files.get(style) for style in search]))
         if len(tar_font) == 0 and len(font_files.keys()) == 1:
             tar_font = [font_files[list(font_files.keys())[0]]]
@@ -1291,7 +1302,7 @@ class Text(Transformable):
         if auto_transform:
             self.transform()
 
-    def bbox(self) -> Tuple[Point, Point]:
+    def bbox(self):
         '''Find the bounding box of all the paths that make
         each letter.
         This will only work if there are available paths.
@@ -1322,7 +1333,7 @@ class Text(Transformable):
             for path in paths:
                 path.transform(matrix)
 
-    def segments(self, precision=0) -> List[Segment]:
+    def segments(self, precision=0):
         '''Get a list of all points in all paths
         with provide precision.
         This will only work if there are available paths.
@@ -1334,7 +1345,7 @@ class Text(Transformable):
         return segs
 
     @staticmethod
-    def load_system_fonts(reload:bool=False) -> List[dict]:
+    def load_system_fonts(reload=False):
         '''Find all fonts in common locations on the file system
         To properly read all fonts they need to be parsed so this
         is inherently slow on systems with many fonts.
@@ -1366,7 +1377,7 @@ class Text(Transformable):
                         Text._system_fonts[name][style] = ffile
                 except:
                     pass
-            logger.debug(f"  Found {len(Text._system_fonts.keys())} fonts in system")
+            logger.debug("  Found {} fonts in system".format(len(Text._system_fonts.keys())))
         return Text._system_fonts
 
 

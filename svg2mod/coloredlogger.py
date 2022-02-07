@@ -62,7 +62,10 @@ class Formatter(logging.Formatter):
     #------------------------------------------------------------------------
 
     def __init__(self, fmt="%(message)s", datefmt=None, style="%"):
-        super().__init__(fmt, datefmt, style)
+        if sys.version_info.major == 2:
+            logging.Formatter.__init__(self, fmt)
+        else:
+            super().__init__(fmt, datefmt, style)
 
     #------------------------------------------------------------------------
 
@@ -72,15 +75,29 @@ class Formatter(logging.Formatter):
         color, sends the message to the super.format, and
         finally returns the style to the original format
         '''
+        fmt_parent = self
+        if hasattr(self, "_style"):
+            fmt_parent = self._style
+
         if sys.stdout.isatty():
-            fmt_org = self._style._fmt
-            self._style._fmt = Formatter.color[record.levelno] + fmt_org + Formatter.reset
+            fmt_org = fmt_parent._fmt
+            fmt_parent._fmt = Formatter.color[record.levelno] + fmt_org + Formatter.reset
         result = logging.Formatter.format(self, record)
         if sys.stdout.isatty():
-            self._style._fmt = fmt_org
+            fmt_parent._fmt = fmt_org
         return result
 
     #------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+
+class StdOutFilter(logging.Filter):
+    #------------------------------------------------------------------------
+    def __init__(self, filter_func):
+        super(logging.Filter, self).__init__()
+        self.filter = filter_func
+    #------------------------------------------------------------------------
+
 
 #----------------------------------------------------------------------------
 
@@ -92,10 +109,10 @@ def split_logger(logger, formatter=Formatter(), brkpoint=logging.WARNING):
         logger.removeHandler(hndl)
 
     hdlrerr = logging.StreamHandler(sys.stderr)
-    hdlrerr.addFilter(lambda msg: brkpoint <= msg.levelno)
+    hdlrerr.addFilter(StdOutFilter(lambda msg: brkpoint <= msg.levelno))
 
     hdlrout = logging.StreamHandler(sys.stdout)
-    hdlrout.addFilter(lambda msg: brkpoint > msg.levelno)
+    hdlrout.addFilter(StdOutFilter(lambda msg: brkpoint > msg.levelno))
 
     hdlrerr.setFormatter(formatter)
     hdlrout.setFormatter(formatter)

@@ -20,10 +20,10 @@ from a svg object into a single continuous line
 '''
 
 import copy
-from typing import List, Tuple
+#from typing import List, Tuple
 
-from svg2mod import svg
-from svg2mod.coloredlogger import logger
+from . import svg
+from .coloredlogger import logger
 
 #----------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ class LineSegment:
     #------------------------------------------------------------------------
 
     @staticmethod
-    def vertical_intersection(p: svg.Point, q: svg.Point, r: float) -> svg.Point:
+    def vertical_intersection(p, q, r):
         '''This is used for the in-lining algorithm
         it finds a point on a line p -> q where x = r
         '''
@@ -95,7 +95,7 @@ class LineSegment:
 
     #------------------------------------------------------------------------
 
-    def connects( self, segment: 'LineSegment' ) -> bool:
+    def connects( self, segment):
         ''' Return true if provided segment shares
         endpoints with the current segment
         '''
@@ -108,7 +108,7 @@ class LineSegment:
 
     #------------------------------------------------------------------------
 
-    def on_line(self, point: svg.Point) -> bool:
+    def on_line(self, point):
         '''Returns true if the point is on the line.
             Adapted from:
             https://stackoverflow.com/questions/36487156/javascript-determine-if-a-point-resides-above-or-below-a-line-defined-by-two-poi
@@ -117,7 +117,7 @@ class LineSegment:
 
     #------------------------------------------------------------------------
 
-    def intersects( self, segment: 'LineSegment' ) -> bool:
+    def intersects( self, segment):
         """ Return true if line segments 'p1q1' and 'p2q2' intersect.
             Adapted from:
               http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
@@ -158,7 +158,7 @@ class LineSegment:
 
     #------------------------------------------------------------------------
 
-    def q_next( self, q:svg.Point ):
+    def q_next( self, q ):
         '''Shift segment endpoints so self.q is self.p
         and q is the new self.q
         '''
@@ -183,16 +183,16 @@ class PolygonSegment:
     ''' A polygon should be a collection of segments
     creating an enclosed or manifold shape.
     This class provides functionality to find overlap
-    points between a segment and it's self as well as
+    points between a segment and its self as well as
     identify if another polygon rests inside of the
-    closed area of it's self.
+    closed area of its self.
 
     When initializing this class it will remove duplicate points in a row.
     '''
 
     #------------------------------------------------------------------------
 
-    def __init__( self, points:List):
+    def __init__( self, points):
 
         self.points = [points[0]]
 
@@ -200,19 +200,18 @@ class PolygonSegment:
             if self.points[-1] != point:
                 self.points.append(point)
 
-
         self.bbox = None
         self.calc_bbox()
 
 
     #------------------------------------------------------------------------
 
-    def _set_points(self, points: List[svg.Point]):
+    def _set_points(self, points):
         self.points = points[:]
 
     #------------------------------------------------------------------------
 
-    def _find_insertion_point( self, hole: 'PolygonSegment', holes: list, other_insertions: list ):
+    def _find_insertion_point( self, hole, holes, other_insertions ):
         ''' KiCad will not "pick up the pen" when moving between a polygon outline
         and holes within it, so we search for a pair of points connecting the
         outline (self) or other previously inserted points to the hole such
@@ -246,7 +245,7 @@ class PolygonSegment:
 
     #------------------------------------------------------------------------
 
-    def points_starting_on_index( self, index: int ) -> List[svg.Point]:
+    def points_starting_on_index( self, index ):
         ''' Return the list of ordered points starting on the given index, ensuring
         that the first and last points are the same.
         '''
@@ -269,7 +268,7 @@ class PolygonSegment:
 
     #------------------------------------------------------------------------
 
-    def inline( self, segments: List[svg.Point] ) -> List[svg.Point]:
+    def inline( self, segments ):
         ''' Return a list of points with the given polygon segments (paths) inlined. '''
 
         if len( segments ) < 1:
@@ -314,7 +313,7 @@ class PolygonSegment:
 
     #------------------------------------------------------------------------
 
-    def intersects( self, line_segment: LineSegment, check_connects:bool , count_intersections=False, get_points=False):
+    def intersects( self, line_segment, check_connects , count_intersections=False, get_points=False):
         '''Check to see if line_segment intersects with any
         segments of the polygon. Default return True/False
 
@@ -420,7 +419,7 @@ class PolygonSegment:
 
     #------------------------------------------------------------------------
 
-    def calc_bbox(self) -> Tuple[svg.Point, svg.Point]:
+    def calc_bbox(self):
         '''Calculate bounding box of self'''
         self.bbox =  (
             svg.Point(min(self.points, key=lambda v: v.x).x, min(self.points, key=lambda v: v.y).y),

@@ -21,8 +21,8 @@ Svg2ModExport.
 '''
 
 
-from svg2mod import svg
-from svg2mod.coloredlogger import logger, unfiltered_logger
+from . import svg
+from .coloredlogger import logger, unfiltered_logger
 
 #----------------------------------------------------------------------------
 

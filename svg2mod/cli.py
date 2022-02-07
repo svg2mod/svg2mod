@@ -22,17 +22,20 @@ as a tool in a terminal.
 import argparse
 import logging
 import os
-import shlex
 import sys
 import traceback
 
-import svg2mod.coloredlogger as coloredlogger
-from svg2mod.coloredlogger import logger, unfiltered_logger
-from svg2mod import svg
-from svg2mod.exporter import (DEFAULT_DPI, Svg2ModExportLatest,
+from .coloredlogger import logger, unfiltered_logger
+from . import svg, coloredlogger
+from .exporter import (DEFAULT_DPI, Svg2ModExportLatest,
                               Svg2ModExportLegacy, Svg2ModExportLegacyUpdater,
                               Svg2ModExportPretty)
-from svg2mod.importer import Svg2ModImport
+from .importer import Svg2ModImport
+
+try:
+    from shlex import quote
+except ImportError:
+    from pipes import quote
 
 #----------------------------------------------------------------------------
 
@@ -60,9 +63,9 @@ def main():
         fonts = svg.Text.load_system_fonts()
         unfiltered_logger.info("Font Name: list of supported styles.")
         for font in fonts:
-            fnt_text = f"  {font}:"
+            fnt_text = "  {}:".format(font)
             for styles in fonts[font]:
-                fnt_text += f" {styles},"
+                fnt_text += " {},".format(styles)
             fnt_text = fnt_text.strip(",")
             unfiltered_logger.info(fnt_text)
         sys.exit(0)
@@ -147,7 +150,7 @@ def main():
                 )
 
         cmd_args = [os.path.basename(sys.argv[0])] + sys.argv[1:]
-        cmdline = ' '.join(shlex.quote(x) for x in cmd_args)
+        cmdline = ' '.join(quote(x) for x in cmd_args)
 
         # Export the footprint:
         exported.write(cmdline)
@@ -155,7 +158,7 @@ def main():
         if args.debug_print:
             traceback.print_exc()
         else:
-            logger.critical(f'Unhandled exception (Exiting)\n {type(e).__name__}: {e} ')
+            logger.critical('Unhandled exception (Exiting)\n {}: {} '.format(type(e).__name__, e))
         exit(-1)
 
 #----------------------------------------------------------------------------
