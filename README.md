@@ -19,9 +19,22 @@ It includes a modified version of [cjlano's python SVG parser and drawing module
 * Python 3
 * [fonttools](https://pypi.org/project/fonttools/)
 
-## Installation
+## Installation  
 
-```pip install svg2mod```
+[pipx](https://github.com/pypa/pipx) has a few advamtages over installing via normal pip. It sets up the package in  a vitrual enviroment in the background and takes care of all path requirements so that the package is availible globaly on your system without having to worry about dependecies and confilicts within python versions.
+First istall pipx  if you do not already have it on your system
+
+```pip3 install pipx```   
+
+and ensure the set up the path handling  
+
+```pipx ensurepath```
+
+intall the svg2mod package  
+
+```pipx install svg2mod```
+
+the svg2mod command is availible globaly on you whole sytem, and you will  not have to worry about python upgrades breaking your dependencies. 
 
 ## Showcase
 
