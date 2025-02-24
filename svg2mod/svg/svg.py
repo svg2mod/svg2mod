@@ -36,6 +36,7 @@ from typing import Iterable, List, Tuple
 from fontTools.misc import loggingTools
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import ttFont
+
 from svg2mod.coloredlogger import logger
 
 from .geometry import Angle, Bezier, MoveTo, Point, Segment, simplify_segment
@@ -227,12 +228,12 @@ class Transformable:
         '''
         for style in self.transformable_styles:
             if self.style.get(style):
-                has_units = re.search(r'\D', self.style[style] if isinstance(self.style[style], str) else '')
+                has_units = re.search(r'\D+', self.style[style] if isinstance(self.style[style], str) else '')
                 if has_units is None:
                     self.style[style] = float(self.style[style]) * ((matrix.xscale()+matrix.yscale())/2)
                 else:
                     unit = has_units.group().lower()
-                    self.style[style] = float(re.search(r'\d', self.style[style]).group()) * unit_convert.get(unit, 1) * ((matrix.xscale()+matrix.yscale())/2)
+                    self.style[style] = float(re.search(r'\d+', self.style[style]).group()) * unit_convert.get(unit, 1) * ((matrix.xscale()+matrix.yscale())/2)
 
 
     def transform(self, matrix=None):
@@ -411,13 +412,14 @@ class Group(Transformable):
         return {'Group ' + self.id + " ({})".format( self.name ) : self.items}
 
 class Matrix:
-    ''' SVG transformation matrix and its operations
+    '''SVG transformation matrix and its operations
     a SVG matrix is represented as a list of 6 values [a, b, c, d, e, f]
     (named vect hereafter) which represent the 3x3 matrix
     ((a, c, e)
      (b, d, f)
      (0, 0, 1))
-    see http://www.w3.org/TR/SVG/coords.html#EstablishingANewUserSpace '''
+     SVGs implement the same transform that CSS does
+    see https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/matrix#values'''
 
     def __init__(self, vect=None):
         # Unit transformation vect by default
@@ -452,10 +454,16 @@ class Matrix:
 
     def xscale(self):
         '''Return the rotated x scalar value'''
-        return self.vect[0]/abs(self.vect[0]) * math.sqrt(self.vect[0]**2 + self.vect[2]**2)
+        if self.vect[0] == 0:
+            return 1
+        else:
+            return self.vect[0]/abs(self.vect[0]) * math.sqrt(self.vect[0]**2 + self.vect[2]**2)
     def yscale(self):
         '''Return the rotated x scalar value'''
-        return self.vect[3]/abs(self.vect[3]) * math.sqrt(self.vect[1]**2 + self.vect[3]**2)
+        if self.vect[3] == 0:
+            return 1
+        else:
+            return self.vect[3]/abs(self.vect[3]) * math.sqrt(self.vect[1]**2 + self.vect[3]**2)
     def rot(self):
         '''Return the angle of rotation from the matrix.
 
@@ -466,7 +474,6 @@ class Matrix:
         if self.vect[3] != 0:
             return Angle(math.atan2(self.vect[1], self.vect[3]))
         return 0
-
 
 
 class Path(Transformable):
@@ -977,7 +984,6 @@ class Arc(Ellipse):
         x = self.center.x + self.rx * math.cos(((self.angles[1] - self.angles[0]) * t) + self.angles[0])
         y = self.center.y + self.ry * math.sin(((self.angles[1] - self.angles[0]) * t) + self.angles[0])
         return Point(x,y)
-
 
 
 # A circle is a special type of ellipse where rx = ry = radius
