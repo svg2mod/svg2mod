@@ -455,13 +455,13 @@ class Matrix:
     def xscale(self):
         '''Return the rotated x scalar value'''
         if self.vect[0] == 0:
-            return 1
+            return abs(self.vect[2])
         else:
             return self.vect[0]/abs(self.vect[0]) * math.sqrt(self.vect[0]**2 + self.vect[2]**2)
     def yscale(self):
-        '''Return the rotated x scalar value'''
+        '''Return the rotated y scalar value'''
         if self.vect[3] == 0:
-            return 1
+            return abs(self.vect[1])
         else:
             return self.vect[3]/abs(self.vect[3]) * math.sqrt(self.vect[1]**2 + self.vect[3]**2)
     def rot(self):
@@ -1487,4 +1487,3 @@ for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     tag = getattr(cls, 'tag', None)
     if tag:
         svgClass[svg_ns + tag] = cls
-
