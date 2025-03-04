@@ -229,11 +229,13 @@ class Transformable:
         for style in self.transformable_styles:
             if self.style.get(style):
                 has_units = re.search(r'\D+', self.style[style] if isinstance(self.style[style], str) else '')
+                xscale = abs(matrix.xscale())
+                yscale = abs(matrix.yscale())
                 if has_units is None:
-                    self.style[style] = float(self.style[style]) * ((matrix.xscale()+matrix.yscale())/2)
+                    self.style[style] = float(self.style[style]) * ((xscale+yscale)/2)
                 else:
                     unit = has_units.group().lower()
-                    self.style[style] = float(re.search(r'\d+', self.style[style]).group()) * unit_convert.get(unit, 1) * ((matrix.xscale()+matrix.yscale())/2)
+                    self.style[style] = float(re.search(r'\d+', self.style[style]).group()) * unit_convert.get(unit, 1) * ((xscale+yscale)/2)
 
 
     def transform(self, matrix=None):
